@@ -1,0 +1,3114 @@
+{% comment %}
+  Health Quiz Section for Shopify
+  This section creates an interactive health quiz that recommends products based on user responses.
+{% endcomment %}
+
+{% assign quiz_title = 'Find Your Lean Code' %}
+{% assign quiz_description = 'Take a 3-minute science-backed test to understand your metabolism & get your Lean up recommendation.' %}
+{% assign start_button_text = 'Start Test' %}
+{% assign recommended_collection = collections['lean-up'] %}
+{% assign recommended_product = recommended_collection.products.first %}
+{% assign primary_color = '#eaaca3' %}
+{% assign background_color = '#fff6f6' %}
+{% assign accent_color = '#f8aa99' %}
+
+<!doctype html>
+<html lang="{{ request.locale.iso_code }}">
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <title>
+      Final Lean up Test™ Questionnaire -
+      {{ shop.name }}
+    </title>
+    <meta
+      name="description"
+      content="Take a 3-minute science-backed test to understand your metabolism & get your Lean up recommendation."
+    >
+
+    {{ content_for_header }}
+
+    <!-- Customer Information -->
+    <script>
+      // Expose Shopify product data for recommended handles to JS
+      window.all_products = {
+          'lean-up': {
+              url: "{{ all_products['lean-up'].url }}",
+              title: "{{ all_products['lean-up'].title | escape }}",
+              description: "{{ all_products['lean-up'].description | strip_html | escape }}",
+              featured_image: "{{ all_products['lean-up'].featured_image | img_url: 'medium' }}",
+              variants: [
+                  {% for v in all_products['lean-up'].variants %}
+                  { id: {{ v.id }}, title: "{{ v.title | escape }}", price: "{{ v.price | money }}" }{% unless forloop.last %},{% endunless %}
+                  {% endfor %}
+              ]
+          },
+          'rest-up': {
+              url: "{{ all_products['rest-up'].url }}",
+              title: "{{ all_products['rest-up'].title | escape }}",
+              description: "{{ all_products['rest-up'].description | strip_html | escape }}",
+              featured_image: "{{ all_products['rest-up'].featured_image | img_url: 'medium' }}",
+              variants: [
+                  {% for v in all_products['rest-up'].variants %}
+                  { id: {{ v.id }}, title: "{{ v.title | escape }}", price: "{{ v.price | money }}" }{% unless forloop.last %},{% endunless %}
+                  {% endfor %}
+              ]
+          },
+          'd-up': {
+              url: "{{ all_products['d-up'].url }}",
+              title: "{{ all_products['d-up'].title | escape }}",
+              description: "{{ all_products['d-up'].description | strip_html | escape }}",
+              featured_image: "{{ all_products['d-up'].featured_image | img_url: 'medium' }}",
+              variants: [
+                  {% for v in all_products['d-up'].variants %}
+                  { id: {{ v.id }}, title: "{{ v.title | escape }}", price: "{{ v.price | money }}" }{% unless forloop.last %},{% endunless %}
+                  {% endfor %}
+              ]
+          }
+      };
+      window.customerInfo = {
+          {% if customer %}
+          isLoggedIn: true,
+          id: {{ customer.id }},
+          firstName: "{{ customer.first_name | escape }}",
+          lastName: "{{ customer.last_name | escape }}",
+          email: "{{ customer.email | escape }}",
+          tags: {{ customer.tags | json }}
+          {% else %}
+          isLoggedIn: false
+          {% endif %}
+      };
+    </script>
+    <style>
+              .qrp-container {
+        font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+        
+        
+        padding: 2rem 1rem;
+      }
+
+      .qrp-title {
+        text-align: center;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        font-size: 3rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff9999 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: none;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+      }
+
+      .qrp-desc {
+        text-align: center;
+        margin-bottom: 3rem;
+        font-size: 1.3rem;
+        color: #5a6c7d;
+        line-height: 1.6;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+        font-weight: 400;
+      }
+
+      .qrp-product-list {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+        margin: 3rem 0;
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .qrp-product-card {
+        display: flex;
+        flex-direction: row;
+        border: none;
+        border-radius: 24px;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #ffffff 0%, #fff9f7 50%, #ffede8 100%);
+        box-shadow:
+          0 4px 24px rgba(255, 107, 53, 0.08),
+          0 1px 4px rgba(0, 0, 0, 0.04),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        gap: 2rem;
+        align-items: flex-start;
+        text-align: left;
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        position: relative;
+        overflow: hidden;
+        max-width: 100%;
+        border: 1px solid rgba(255, 153, 153, 0.1);
+      }
+
+      .qrp-product-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #ff6b35 0%, #f7931e 50%, #ff9999 100%);
+        border-radius: 24px 24px 0 0;
+      }
+
+      .qrp-product-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow:
+          0 12px 48px rgba(255, 107, 53, 0.15),
+          0 4px 16px rgba(0, 0, 0, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        border-color: rgba(255, 107, 53, 0.2);
+      }
+
+      .qrp-product-image {
+        flex-shrink: 0;
+        position: relative;
+        padding: 0.5rem;
+        background: linear-gradient(135deg, rgba(255, 107, 53, 0.05) 0%, rgba(247, 147, 30, 0.05) 100%);
+        border-radius: 20px;
+        transition: all 0.3s ease;
+      }
+
+      .qrp-product-card:hover .qrp-product-image {
+        background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(247, 147, 30, 0.1) 100%);
+      }
+
+      .qrp-product-img {
+        border-radius: 16px;
+        width: 120px;
+        height: 120px;
+        object-fit: cover;
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        box-shadow:
+          0 8px 32px rgba(255, 107, 53, 0.12),
+          0 2px 8px rgba(0, 0, 0, 0.06);
+        filter: brightness(1.02) saturate(1.1);
+      }
+
+      .qrp-product-img:hover {
+        transform: scale(1.05) rotate(1deg);
+        box-shadow:
+          0 12px 48px rgba(255, 107, 53, 0.2),
+          0 4px 16px rgba(0, 0, 0, 0.1);
+        filter: brightness(1.05) saturate(1.2);
+      }
+
+      .qrp-product-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .qrp-product-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .qrp-product-title {
+        font-size: 1.4rem;
+        font-weight: 800;
+        margin: 0;
+        color: #1a1a1a;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+      }
+
+      .qrp-product-desc {
+        font-size: 0.95rem;
+        color: #6b7280;
+        margin: 0;
+        line-height: 1.5;
+        font-weight: 400;
+      }
+
+      .qrp-product-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        width: 100%;
+      }
+
+      .qrp-cart-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        width: 100%;
+      }
+
+      .qrp-quantity-add-wrapper {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        justify-content: flex-start;
+      }
+
+      .qrp-product-btn {
+        display: inline-block;
+        padding: 0.9rem 1.8rem;
+        background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
+        color: #374151;
+        border-radius: 16px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        border: 1.5px solid rgba(55, 65, 81, 0.1);
+        text-align: center;
+        align-self: flex-start;
+        box-shadow:
+          0 4px 16px rgba(0, 0, 0, 0.04),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+        letter-spacing: 0.01em;
+      }
+
+      .qrp-product-btn:hover {
+        transform: translateY(-2px);
+        box-shadow:
+          0 8px 24px rgba(0, 0, 0, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
+        border-color: rgba(255, 107, 53, 0.2);
+        color: #ff6b35;
+      }
+
+      .qrp-variant-select {
+        padding: 0.8rem;
+        border-radius: 16px;
+        border: 1.5px solid rgba(107, 114, 128, 0.2);
+        font-size: 0.9rem;
+        background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
+        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        font-family: inherit;
+        color: #374151;
+        font-weight: 500;
+        box-shadow:
+          0 2px 8px rgba(0, 0, 0, 0.04),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      }
+
+      .qrp-variant-select:focus {
+        outline: none;
+        border-color: #ff6b35;
+        box-shadow:
+          0 0 0 4px rgba(255, 107, 53, 0.1),
+          0 4px 16px rgba(255, 107, 53, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        background: #ffffff;
+      }
+
+      .qrp-quantity-input {
+        width: 80px;
+        padding: 0.9rem;
+        border-radius: 16px;
+        border: 1.5px solid rgba(107, 114, 128, 0.2);
+        text-align: center;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
+        color: #374151;
+        box-shadow:
+          0 2px 8px rgba(0, 0, 0, 0.04),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      }
+
+      .qrp-quantity-input:focus {
+        outline: none;
+        border-color: #ff6b35;
+        box-shadow:
+          0 0 0 4px rgba(255, 107, 53, 0.1),
+          0 4px 16px rgba(255, 107, 53, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        background: #ffffff;
+      }
+
+      .qrp-add-cart-btn {
+        padding: 1rem 2rem;
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        color: #fff;
+        border-radius: 16px;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow:
+          0 6px 20px rgba(255, 107, 53, 0.25),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        position: relative;
+        overflow: hidden;
+        flex: 1;
+        min-width: 140px;
+      }
+
+      .qrp-add-cart-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+      }
+
+      .qrp-add-cart-btn:hover::before {
+        left: 100%;
+      }
+
+      .qrp-add-cart-btn:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow:
+          0 8px 32px rgba(255, 107, 53, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        background: linear-gradient(135deg, #f7931e 0%, #ff6b35 100%);
+      }
+
+      .qrp-actions {
+        text-align: center;
+        margin-top: 5rem;
+        padding-bottom: 4rem;
+      }
+
+      .qrp-action-btn {
+        display: inline-block;
+        margin: 0 1rem;
+        padding: 1.2rem 2.5rem;
+        background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
+        color: #374151;
+        border-radius: 20px;
+        text-decoration: none;
+        font-weight: 600;
+        border: 1.5px solid rgba(107, 114, 128, 0.15);
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        backdrop-filter: blur(20px);
+        box-shadow:
+          0 8px 32px rgba(0, 0, 0, 0.06),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        font-size: 1rem;
+        letter-spacing: 0.01em;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .qrp-action-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 107, 53, 0.1), transparent);
+        transition: left 0.6s;
+      }
+
+      .qrp-action-btn:hover::before {
+        left: 100%;
+      }
+
+      .qrp-action-btn:hover {
+        background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
+        transform: translateY(-4px) scale(1.02);
+        box-shadow:
+          0 12px 48px rgba(0, 0, 0, 0.1),
+          inset 0 1px 0 rgba(255, 255, 255, 1);
+        border-color: rgba(255, 107, 53, 0.2);
+        color: #ff6b35;
+      }
+
+      @media (max-width: 768px) {
+        .qrp-product-card {
+          flex-direction: row;
+          text-align: left;
+          padding: 1rem;
+          gap: 1rem;
+          align-items: flex-start;
+        }
+
+        .qrp-product-image {
+          flex-shrink: 0;
+        }
+
+        .qrp-product-img {
+          width: 100px;
+          height: 100px;
+        }
+
+        .qrp-product-content {
+          align-items: flex-start;
+          text-align: left;
+          width: 100%;
+        }
+
+        .qrp-product-info {
+          align-items: flex-start;
+          text-align: left;
+        }
+
+        .qrp-product-controls {
+          align-items: flex-start;
+          width: 100%;
+        }
+
+        .qrp-cart-form {
+          width: 100%;
+          align-items: flex-start;
+        }
+
+        .qrp-quantity-add-wrapper {
+          justify-content: flex-start;
+          width: 100%;
+        }
+
+        .qrp-variant-select {
+          width: 100%;
+        }
+
+        .qrp-title {
+          font-size: 2rem;
+          padding-top: 2rem;
+        }
+
+        .qrp-desc {
+          font-size: 1.1rem;
+          margin-bottom: 2rem;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .qrp-container {
+          padding: 0 0.5rem;
+        }
+
+        .qrp-product-card {
+          padding: 0.8rem;
+          gap: 0.8rem;
+        }
+
+        .qrp-product-img {
+          width: 80px;
+          height: 80px;
+        }
+
+        .qrp-product-content {
+          gap: 0.8rem;
+        }
+
+        .qrp-product-title {
+          font-size: 1.1rem;
+        }
+
+        .qrp-product-desc {
+          font-size: 0.85rem;
+          line-height: 1.4;
+        }
+
+        .qrp-product-controls {
+          gap: 0.6rem;
+        }
+
+        .qrp-cart-form {
+          gap: 0.6rem;
+        }
+
+        .qrp-quantity-add-wrapper {
+          gap: 0.6rem;
+          flex-wrap: wrap;
+        }
+
+        .qrp-add-cart-btn {
+          padding: 0.7rem 1rem;
+          font-size: 0.75rem;
+          min-width: 100px;
+        }
+
+        .qrp-quantity-input {
+          width: 60px;
+          padding: 0.7rem 0.5rem;
+          font-size: 0.85rem;
+        }
+
+        .qrp-variant-select {
+          padding: 0.6rem;
+          font-size: 0.8rem;
+        }
+
+        .qrp-action-btn {
+          display: block;
+          margin: 0.5rem auto;
+          max-width: 280px;
+        }
+      }
+              /* Isolated CSS for the health quiz */
+              .health-quiz-container {
+                  --quiz-bg: {{ background_color }};
+                  --quiz-accent: {{ primary_color }};
+                  --quiz-white: #fff;
+                  --quiz-option-hover: #7b4523;
+                  --quiz-option-active: {{ primary_color }};
+                  --quiz-progress-color: {{ primary_color }};
+                  --quiz-accent-color: {{ accent_color }};
+
+                  font-family: 'Arial', sans-serif;
+                  background-color: var(--quiz-bg);
+                  color: var(--quiz-accent);
+                  padding: 20px;
+                  max-width: 420px;
+                  margin: 0 auto;
+                  border-radius: 12px;
+                  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+              }
+
+              .health-quiz-container * {
+                  box-sizing: border-box;
+              }
+
+              .health-quiz-container .quiz-wrapper {
+                  width: 100%;
+                  position: relative;
+              }
+
+              .health-quiz-container .container {
+                  width: 100%;
+              }
+
+              .health-quiz-container .progress-bar {
+                  height: 6px;
+                  background-color: rgba(234, 172, 163, 0.2);
+                  border-radius: 3px;
+                  margin: 20px 0;
+                  overflow: hidden;
+              }
+
+              .health-quiz-container .progress-bar span {
+                  display: block;
+                  height: 100%;
+                  background-color: var(--quiz-progress-color);
+                  width: 0%;
+                  transition: width 0.4s ease-in-out;
+              }
+
+              .health-quiz-container .back-btn {
+                  background: none !important;
+                  border: none !important;
+                  color: var(--quiz-progress-color) !important;
+                  font-size: 14px !important;
+                  margin-bottom: 20px;
+                  display: flex;
+                  align-items: center;
+                  cursor: pointer;
+                  padding: 0;
+                  text-decoration: none;
+              }
+
+              .health-quiz-container h2 {
+                  font-size: 42px !important;
+                  font-weight: bold !important;
+                  text-align: center !important;
+                  margin-bottom: 24px !important;
+                  color: #222 !important;
+                  line-height: 1.2 !important;
+              }
+
+              .health-quiz-container h3 {
+                  font-size: 20px !important;
+                  font-weight: 600 !important;
+                  text-align: left !important;
+                  margin: 24px 0 16px 0 !important;
+                  color: #333 !important;
+                  line-height: 1.3 !important;
+              }
+
+              .health-quiz-container .option-group {
+                  display: none;
+                  opacity: 1;
+                  transform: none;
+                  z-index: 1;
+                  position: absolute;
+                  width: 100%;
+                  left: 0;
+                  top: 0;
+                  pointer-events: none;
+              }
+
+              .health-quiz-container .option-group.active {
+                  display: block !important;
+                  opacity: 1;
+                  transform: none;
+                  position: relative;
+                  z-index: 2;
+                  pointer-events: auto;
+              }
+
+              .health-quiz-container .option-label {
+                  position: relative;
+                  background: var(--quiz-white) !important;
+                  border: 2px solid transparent !important;
+                  padding: 16px 16px 16px 48px !important;
+                  border-radius: 12px !important;
+                  margin-bottom: 12px !important;
+                  cursor: pointer !important;
+                  transition: all 0.3s ease !important;
+                  display: flex !important;
+                  align-items: center !important;
+                  text-align: left !important;
+              }
+
+              .health-quiz-container .option-label::before {
+                  content: "";
+                  position: absolute;
+                  top: 50%;
+                  left: 16px;
+                  transform: translateY(-50%);
+                  width: 18px;
+                  height: 18px;
+                  border-radius: 50%;
+                  background: #fff;
+                  border: 2px solid #222;
+                  box-sizing: border-box;
+              }
+
+              .health-quiz-container .option-group input[type="radio"] {
+                  display: none !important;
+              }
+
+              .health-quiz-container .option-group input[type="radio"]:checked+.option-label {
+                  background: var(--quiz-option-active) !important;
+                  border-color: var(--quiz-accent) !important;
+              }
+
+              .health-quiz-container .option-group input[type="radio"]:checked+.option-label::before {
+                  border-color: var(--quiz-accent) !important;
+                  background: var(--quiz-white) !important;
+              }
+
+              .health-quiz-container .option-group input[type="radio"]:checked+.option-label::after {
+                  content: '';
+                  position: absolute;
+                  left: 19px;
+                  top: 50%;
+                  transform: translateY(-50%);
+                  width: 12px;
+                  height: 12px;
+                  background: #222;
+                  border-radius: 50%;
+                  display: block;
+              }
+
+              .health-quiz-container .option-group input[type="checkbox"] {
+                  display: none !important;
+              }
+
+              .health-quiz-container .option-group input[type="checkbox"] + .option-label::before {
+                  content: "";
+                  position: absolute;
+                  top: 50%;
+                  left: 16px;
+                  transform: translateY(-50%);
+                  width: 18px;
+                  height: 18px;
+                  border-radius: 50%;
+                  background: #fff;
+                  border: 2px solid #222;
+                  box-sizing: border-box;
+              }
+
+              .health-quiz-container .option-group input[type="checkbox"]:checked + .option-label {
+                  background: var(--quiz-option-active) !important;
+                  border-color: var(--quiz-accent) !important;
+              }
+
+              .health-quiz-container .option-group input[type="checkbox"]:checked + .option-label::before {
+                  border-color: var(--quiz-accent) !important;
+                  background: var(--quiz-white) !important;
+              }
+
+              .health-quiz-container .option-group input[type="checkbox"]:checked + .option-label::after {
+                  content: '';
+                  position: absolute;
+                  left: 19px;
+                  top: 50%;
+                  transform: translateY(-50%);
+                  width: 12px;
+                  height: 12px;
+                  background: #222;
+                  border-radius: 50%;
+                  display: block;
+              }
+
+              .health-quiz-container .option-title {
+                  font-weight: 600 !important;
+                  font-size: 16px !important;
+                  color: #222 !important;
+                  line-height: 1.4 !important;
+                  margin: 0 !important;
+              }
+
+              .health-quiz-container .form-input {
+                  width: 100% !important;
+                  padding: 12px !important;
+                  border-radius: 8px !important;
+                  border: 1px solid #ccc !important;
+                  font-size: 1rem !important;
+                  margin-bottom: 16px !important;
+                  font-family: inherit !important;
+                  background: white !important;
+              }
+
+              .health-quiz-container .nav-btn {
+                  width: 100% !important;
+                  background-color: var(--quiz-accent) !important;
+                  color: var(--quiz-white) !important;
+                  padding: 16px !important;
+                  border: none !important;
+                  border-radius: 10px !important;
+                  font-size: 1rem !important;
+                  cursor: pointer !important;
+                  margin-top: 16px !important;
+                  position: relative;
+                  font-family: inherit !important;
+                  text-decoration: none !important;
+              }
+
+              .health-quiz-container .nav-btn.loading {
+                  pointer-events: none;
+                  opacity: 0.6;
+              }
+
+              .health-quiz-container .nav-btn.loading::after {
+                  content: '';
+                  border: 3px solid #fff;
+                  border-top: 3px solid var(--quiz-accent);
+                  border-radius: 50%;
+                  width: 16px;
+                  height: 16px;
+                  animation: quiz-spin 0.8s linear infinite;
+                  position: absolute;
+                  right: 16px;
+                  top: 50%;
+                  transform: translateY(-50%);
+              }
+
+              @keyframes quiz-spin {
+                  to {
+                      transform: translateY(-50%) rotate(360deg);
+                  }
+              }
+
+              .health-quiz-container .option-label.bounce {
+                  animation: quiz-popBounce 0.4s ease;
+              }
+
+              @keyframes quiz-popBounce {
+                  0% { transform: scale(1); }
+                  50% { transform: scale(1.05); }
+                  100% { transform: scale(1); }
+              }
+
+              .health-quiz-container .fade-out {
+                  animation: quiz-fadeOut 0.5s ease forwards;
+              }
+
+              .health-quiz-container .fade-in {
+                  animation: quiz-fadeIn 0.5s ease forwards;
+              }
+
+              @keyframes quiz-fadeOut {
+                  from { opacity: 1; transform: translateY(0); }
+                  to { opacity: 0; transform: translateY(-20px); }
+              }
+
+              @keyframes quiz-fadeIn {
+                  from { opacity: 0; transform: translateY(20px); }
+                  to { opacity: 1; transform: translateY(0); }
+              }
+
+              /* Loading Screen Styles */
+              .health-quiz-container .loading-screen {
+                  position: fixed;
+                  top: 0;
+                  left: 0;
+                  width: 100%;
+                  height: 100%;
+                  background: var(--quiz-bg);
+                  display: none;
+                  flex-direction: column;
+                  justify-content: center;
+                  align-items: center;
+                  z-index: 1000;
+                  text-align: center;
+              }
+
+              .health-quiz-container .loading-screen.active {
+                  display: flex;
+              }
+
+              .health-quiz-container .loading-spinner {
+                  width: 60px;
+                  height: 60px;
+                  border: 4px solid rgba(234, 172, 163, 0.2);
+                  border-top: 4px solid var(--quiz-accent);
+                  border-radius: 50%;
+                  animation: quiz-spinner-spin 1s linear infinite;
+                  margin-bottom: 24px;
+              }
+
+              @keyframes quiz-spinner-spin {
+                  0% { transform: rotate(0deg); }
+                  100% { transform: rotate(360deg); }
+              }
+
+              .health-quiz-container .loading-text {
+                  font-size: 24px;
+                  font-weight: 600;
+                  color: #333;
+                  margin-bottom: 12px;
+                  animation: quiz-pulse 2s ease-in-out infinite;
+              }
+
+              .health-quiz-container .loading-subtext {
+                  font-size: 16px;
+                  color: #666;
+                  max-width: 300px;
+                  line-height: 1.4;
+              }
+
+              @keyframes quiz-pulse {
+                  0%, 100% { opacity: 1; }
+                  50% { opacity: 0.7; }
+              }
+
+              /* Welcome Page Styles */
+              .health-quiz-container .welcome-page {
+                  text-align: center;
+                  padding: 40px 20px;
+                  display: block;
+              }
+
+              .health-quiz-container .welcome-page.hidden {
+                  display: none;
+              }
+
+              .health-quiz-container .welcome-title {
+                  font-size: 36px !important;
+                  font-weight: bold !important;
+                  margin-bottom: 24px !important;
+                  color: #222 !important;
+                  line-height: 1.2 !important;
+                  font-style: italic;
+              }
+
+              .health-quiz-container .welcome-text {
+                  font-size: 18px;
+                  color: #666;
+                  line-height: 1.6;
+                  margin-bottom: 32px;
+                  max-width: 400px;
+                  margin-left: auto;
+                  margin-right: auto;
+              }
+
+              .health-quiz-container .start-btn {
+                  width: 100% !important;
+                  background-color: var(--quiz-accent) !important;
+                  color: var(--quiz-white) !important;
+                  padding: 18px !important;
+                  border: none !important;
+                  border-radius: 10px !important;
+                  font-size: 18px !important;
+                  font-weight: 600 !important;
+                  cursor: pointer !important;
+                  font-family: inherit !important;
+                  text-decoration: none !important;
+                  transition: all 0.3s ease;
+                  box-shadow: 0 4px 12px rgba(234, 172, 163, 0.3);
+              }
+
+              .health-quiz-container .start-btn:hover {
+                  background-color: #d9958b !important;
+                  transform: translateY(-2px);
+                  box-shadow: 0 6px 16px rgba(234, 172, 163, 0.4);
+              }
+
+              .health-quiz-container .quiz-content {
+                  display: none;
+              }
+
+              .health-quiz-container .quiz-content.active {
+                  display: block;
+              }
+
+              /* Results Page Styles */
+              .health-quiz-container .results-page {
+                  font-family: 'Segoe UI', sans-serif !important;
+                  background-color: #fff6f6 !important;
+                  padding: 40px 20px !important;
+                  display: none;
+                  flex-direction: column !important;
+                  align-items: center !important;
+                  width: 100%;
+                  max-width: 100%;
+                  overflow-x: hidden;
+              }
+
+              .health-quiz-container .results-page.active {
+                  display: flex !important;
+              }
+
+              .health-quiz-container .results-title {
+                  font-size: 24px !important;
+                  font-weight: bold !important;
+                  text-align: center !important;
+                  margin-bottom: 24px !important;
+                  color: #222 !important;
+              }
+
+              .health-quiz-container .result-card {
+                  background: white;
+                  border-radius: 16px;
+                  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                  max-width: 380px;
+                  padding: 24px;
+                  width: 100%;
+                  margin-bottom: 24px;
+              }
+
+              .health-quiz-container .header {
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: flex-start;
+                  margin-bottom: 16px;
+              }
+
+              .health-quiz-container .header > div:first-child {
+                  flex: 1;
+                  display: flex;
+                  flex-direction: column;
+                  justify-content: flex-start;
+                  align-items: flex-start;
+                  padding-right: 16px;
+              }
+
+              .health-quiz-container .metabolic-label {
+                  font-size: 12px !important;
+                  color: #666 !important;
+                  text-transform: uppercase !important;
+                  letter-spacing: 0.5px !important;
+                  margin-bottom: 4px !important;
+                  font-weight: 500 !important;
+              }
+
+              .health-quiz-container .bmi-section {
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  flex-direction: column-reverse;
+                  justify-content: center;
+                  text-align: center;
+              }
+
+              .health-quiz-container .bmi-image {
+                  width: 64px;
+                  height: 64px;
+                  object-fit: cover;
+              }
+
+              .health-quiz-container .stage {
+                  font-weight: bold !important;
+                  font-size: 20px !important;
+                  margin-bottom: 0 !important;
+                  color: #f8aa99 !important;
+                  text-transform: uppercase !important;
+                  letter-spacing: 0.5px !important;
+                  line-height: 1.2 !important;
+                  text-align: left !important;
+                  max-width: 200px;
+              }
+
+              .health-quiz-container .months {
+                  color: #333 !important;
+                  font-size: 14px !important;
+                  margin-bottom: 16px !important;
+              }
+
+              .health-quiz-container .progress-wrapper {
+                  background-color: rgba(248, 170, 153, 0.2);
+                  border-radius: 20px;
+                  overflow: hidden;
+                  margin-bottom: 12px;
+                  position: relative;
+              }
+
+              .health-quiz-container .progress {
+                  background: linear-gradient(90deg, #f8aa99, #ffc2b8);
+                  color: white;
+                  text-align: center;
+                  height: 24px;
+                  width: 93%;
+                  font-size: 13px !important;
+                  line-height: 24px;
+                  font-weight: 600;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  position: relative;
+                  overflow: hidden;
+                  border-radius: 20px;
+              }
+
+              .health-quiz-container .progress::after {
+                  content: '';
+                  position: absolute;
+                  top: 0;
+                  left: 0;
+                  right: 0;
+                  bottom: 0;
+                  background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.4) 50%, transparent 70%);
+                  animation: progress-shine 2s infinite;
+              }
+
+              @keyframes progress-shine {
+                  0% { transform: translateX(-100%); }
+                  50% { transform: translateX(100%); }
+                  100% { transform: translateX(100%); }
+              }
+
+              .health-quiz-container .description {
+                  background-color: rgba(248, 170, 153, 0.1) !important;
+                  border-radius: 12px !important;
+                  padding: 16px !important;
+                  font-size: 14px !important;
+                  color: #333 !important;
+                  line-height: 1.5 !important;
+                  margin: 0 0 20px 0 !important;
+              }
+
+              .health-quiz-container .results-recommendations {
+                  text-align: left;
+                  margin-bottom: 24px;
+              }
+
+              .health-quiz-container .results-recommendations h4 {
+                  font-size: 18px !important;
+                  font-weight: 600 !important;
+                  color: #333 !important;
+                  margin-bottom: 12px !important;
+              }
+
+              .health-quiz-container .results-recommendations ul {
+                  padding-left: 20px;
+                  margin: 0;
+              }
+
+              .health-quiz-container .results-recommendations li {
+                  font-size: 14px;
+                  color: #666;
+                  line-height: 1.5;
+                  margin-bottom: 8px;
+              }
+
+
+
+
+
+              .health-quiz-container .results-stats {
+                  display: flex;
+                  justify-content: space-between;
+                  margin-bottom: 24px;
+                  gap: 16px;
+              }
+
+              .health-quiz-container .stat-box {
+                  flex: 1;
+                  padding: 12px;
+                  background: #f8f9fa;
+                  border-radius: 8px;
+                  text-align: center;
+              }
+
+              .health-quiz-container .stat-value {
+                  font-size: 20px !important;
+                  font-weight: bold !important;
+                  color: var(--quiz-accent) !important;
+                  display: block;
+              }
+
+              .health-quiz-container .stat-label {
+                  font-size: 12px;
+                  color: #666;
+                  margin-top: 4px;
+              }
+
+              .health-quiz-container .restart-btn {
+                  width: 100% !important;
+                  background-color: #6c757d !important;
+                  color: white !important;
+                  padding: 16px !important;
+                  border: none !important;
+                  border-radius: 10px !important;
+                  font-size: 1rem !important;
+                  cursor: pointer !important;
+                  font-family: inherit !important;
+                  text-decoration: none !important;
+                  margin-top: 16px;
+                  max-width: 380px;
+              }
+
+              .health-quiz-container .restart-btn:hover {
+                  background-color: #5a6268 !important;
+              }
+
+              /* Gender-specific options */
+              .health-quiz-container .pcos-option {
+                  display: none;
+              }
+
+              .health-quiz-container .pcos-option.show {
+                  display: block;
+              }
+
+              @media (max-width: 500px) {
+                  .health-quiz-container h2 {
+                      font-size: 24px !important;
+                  }
+                  .health-quiz-container h3 {
+                      font-size: 18px !important;
+                  }
+                  .health-quiz-container .loading-text {
+                      font-size: 20px;
+                  }
+                  .health-quiz-container .loading-subtext {
+                      font-size: 14px;
+                      padding: 0 20px;
+                  }
+                  .health-quiz-container .welcome-title {
+                      font-size: 28px !important;
+                  }
+                  .health-quiz-container .welcome-text {
+                      font-size: 16px;
+                      padding: 0 10px;
+                  }
+              }
+
+              /* Health Issues Graphics inside card */
+              .health-quiz-container .health-issues-card {
+                  margin: 0;
+                  width: 100%;
+                  max-width: 100%;
+                  overflow: visible;
+                  padding: 0 0 10px 0;
+              }
+
+              .health-quiz-container .health-issues-card h4 {
+                  font-size: 18px !important;
+                  font-weight: 600 !important;
+                  color: #333 !important;
+                  margin-bottom: 16px !important;
+              }
+
+              /* Personal Health Issues Graphics */
+              .health-quiz-container .health-issues {
+                  margin: 25px 0;
+                  width: 100%;
+                  max-width: 100%;
+                  overflow: hidden;
+              }
+
+              .health-quiz-container .health-issues h4 {
+                  font-size: 18px !important;
+                  font-weight: 600 !important;
+                  color: #333 !important;
+                  margin-bottom: 16px !important;
+                  text-align: center;
+              }
+
+              .health-quiz-container .issues-grid {
+                  display: flex;
+                  flex-wrap: nowrap;
+                  gap: 12px;
+                  margin-top: 20px;
+                  overflow-x: auto;
+                  overflow-y: visible;
+                  padding: 12px 0 20px 0;
+                  scroll-behavior: smooth;
+                  -webkit-overflow-scrolling: touch;
+                  width: 100%;
+                  max-width: 100%;
+              }
+
+              .health-quiz-container .issues-grid::-webkit-scrollbar {
+                  display: none;
+              }
+
+              .health-quiz-container .issue-card {
+                  background: #fff;
+                  border-radius: 20px;
+                  padding: 18px 14px;
+                  text-align: center;
+                  box-shadow: 0 6px 20px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.08);
+                  border: 3px solid #f0f0f0;
+                  transition: all 0.3s ease;
+                  position: relative;
+                  overflow: hidden;
+                  flex: 0 0 auto;
+                  min-width: 120px;
+                  max-width: 140px;
+                  cursor: pointer;
+                  transform: rotate(-1deg);
+              }
+
+              .health-quiz-container .issue-card:nth-child(even) {
+                  transform: rotate(1deg);
+              }
+
+              .health-quiz-container .issue-card:hover {
+                  transform: translateY(-6px) rotate(0deg) scale(1.03);
+                  box-shadow: 0 10px 25px rgba(0,0,0,0.2), 0 4px 12px rgba(0,0,0,0.1);
+                  border-color: #f8aa99;
+                  z-index: 10;
+              }
+
+              .health-quiz-container .issue-card:active {
+                  transform: translateY(-4px) rotate(0deg) scale(1.02);
+              }
+
+              .health-quiz-container .issue-card.warning {
+                  border-color: #ff9800;
+                  background: linear-gradient(135deg, #fff3e0, #ffffff, #fff8f0);
+                  box-shadow: 0 6px 20px rgba(255, 152, 0, 0.2), 0 2px 6px rgba(255, 152, 0, 0.1);
+              }
+
+              .health-quiz-container .issue-card.warning:hover {
+                  border-color: #ff7043;
+                  box-shadow: 0 12px 30px rgba(255, 152, 0, 0.3), 0 4px 12px rgba(255, 152, 0, 0.15);
+              }
+
+              .health-quiz-container .issue-card.critical {
+                  border-color: #f44336;
+                  background: linear-gradient(135deg, #ffebee, #ffffff, #fff5f5);
+                  box-shadow: 0 6px 20px rgba(244, 67, 54, 0.2), 0 2px 6px rgba(244, 67, 54, 0.1);
+              }
+
+              .health-quiz-container .issue-card.critical:hover {
+                  border-color: #e53935;
+                  box-shadow: 0 12px 30px rgba(244, 67, 54, 0.3), 0 4px 12px rgba(244, 67, 54, 0.15);
+              }
+
+              .health-quiz-container .issue-card.good {
+                  border-color: #4caf50;
+                  background: linear-gradient(135deg, #e8f5e8, #ffffff, #f1f8e9);
+                  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.2), 0 2px 6px rgba(76, 175, 80, 0.1);
+              }
+
+              .health-quiz-container .issue-card.good:hover {
+                  border-color: #43a047;
+                  box-shadow: 0 12px 30px rgba(76, 175, 80, 0.3), 0 4px 12px rgba(76, 175, 80, 0.15);
+              }
+
+              .health-quiz-container .issue-icon {
+                  font-size: 32px;
+                  margin-bottom: 12px;
+                  display: block;
+                  height: 40px;
+                  line-height: 40px;
+              }
+
+              .health-quiz-container .issue-icon-svg {
+                  width: 36px;
+                  height: 36px;
+                  margin-bottom: 12px;
+                  display: block;
+                  margin-left: auto;
+                  margin-right: auto;
+                  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+                  transition: all 0.3s ease;
+              }
+
+              .health-quiz-container .issue-card:hover .issue-icon-svg {
+                  transform: scale(1.15) rotate(3deg);
+                  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+              }
+
+              .health-quiz-container .issue-title {
+                  font-size: 15px !important;
+                  font-weight: 700 !important;
+                  color: #333 !important;
+                  margin-bottom: 8px !important;
+                  line-height: 1.2;
+                  text-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                  transition: all 0.3s ease;
+              }
+
+              .health-quiz-container .issue-card:hover .issue-title {
+                  transform: scale(1.02);
+                  color: #222 !important;
+              }
+
+              .health-quiz-container .issue-status {
+                  font-size: 12px !important;
+                  color: #666 !important;
+                  line-height: 1.4;
+                  margin: 0;
+                  font-weight: 500 !important;
+                  transition: all 0.3s ease;
+              }
+
+              .health-quiz-container .issue-card:hover .issue-status {
+                  transform: scale(1.01);
+              }
+
+              .health-quiz-container .issue-card.warning .issue-status {
+                  color: #e65100;
+              }
+
+              .health-quiz-container .issue-card.critical .issue-status {
+                  color: #c62828;
+              }
+
+              .health-quiz-container .issue-card.good .issue-status {
+                  color: #2e7d32;
+              }
+
+              /* Mobile responsive adjustments */
+              @media (max-width: 500px) {
+                  .health-quiz-container .issues-grid {
+                      gap: 8px;
+                      padding: 8px 0 16px 0;
+                      margin-left: -8px;
+                      margin-right: -8px;
+                      padding-left: 8px;
+                      padding-right: 8px;
+                      overflow-y: visible;
+                  }
+
+                  .health-quiz-container .issue-card {
+                      min-width: 100px;
+                      max-width: 110px;
+                      padding: 12px 8px;
+                      border-radius: 16px;
+                      transform: rotate(-0.5deg);
+                  }
+
+                  .health-quiz-container .issue-card:nth-child(even) {
+                      transform: rotate(0.5deg);
+                  }
+
+                  .health-quiz-container .issue-card:hover {
+                      transform: translateY(-4px) rotate(0deg) scale(1.03);
+                  }
+
+                  .health-quiz-container .issue-icon {
+                      font-size: 24px;
+                      margin-bottom: 8px;
+                      height: 30px;
+                      line-height: 30px;
+                  }
+
+                  .health-quiz-container .issue-icon-svg {
+                      width: 28px;
+                      height: 28px;
+                      margin-bottom: 8px;
+                  }
+
+                  .health-quiz-container .issue-card:hover .issue-icon-svg {
+                      transform: scale(1.15) rotate(3deg);
+                  }
+
+                  .health-quiz-container .issue-title {
+                      font-size: 12px !important;
+                  }
+
+                  .health-quiz-container .issue-status {
+                      font-size: 10px !important;
+                  }
+                  .health-quiz-container .products-grid {
+                      gap: 12px;
+                  }
+
+                  .health-quiz-container .product-card {
+                      font-size: 0.9em;
+                      flex-direction: column;
+                      align-items: center;
+                      min-width: 280px;
+                      max-width: 280px;
+                  }
+
+                  .health-quiz-container .product-image {
+                      max-width: 60%;
+                  }
+
+                  .health-quiz-container .product-card-body {
+                      flex-direction: column;
+                      align-items: center;
+                  }
+
+                  .health-quiz-container .product-text-section,
+                  .health-quiz-container .product-cta-section {
+                      max-width: 100%;
+                      text-align: center;
+                  }
+
+                  .health-quiz-container .product-cta-section {
+                      align-items: center;
+                      margin-top: 1em;
+                  }
+
+                  .health-quiz-container .product-pricing {
+                      align-items: center;
+                  }
+              }
+
+              /* Modal Styles for Health Card Details */
+              .health-quiz-container .health-modal {
+                  display: none;
+                  position: fixed;
+                  z-index: 1100;
+                  left: 0;
+                  top: 0;
+                  width: 100%;
+                  height: 100%;
+                  background-color: rgba(0,0,0,0.5);
+                  animation: fadeIn 0.3s ease;
+              }
+
+              .health-quiz-container .health-modal.active {
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+              }
+
+              .health-quiz-container .modal-content {
+                  background: white;
+                  border-radius: 16px;
+                  padding: 24px;
+                  max-width: 400px;
+                  width: 90%;
+                  max-height: 80vh;
+                  overflow-y: auto;
+                  position: relative;
+                  animation: slideIn 0.3s ease;
+              }
+
+              @keyframes slideIn {
+                  from {
+                      transform: scale(0.8) translateY(50px);
+                      opacity: 0;
+                  }
+                  to {
+                      transform: scale(1) translateY(0);
+                      opacity: 1;
+                  }
+              }
+
+              .health-quiz-container .modal-close {
+                  position: absolute;
+                  top: 16px;
+                  right: 16px;
+                  background: none;
+                  border: none;
+                  font-size: 24px;
+                  cursor: pointer;
+                  color: #666;
+                  padding: 0;
+                  width: 30px;
+                  height: 30px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+              }
+
+              .health-quiz-container .modal-close:hover {
+                  color: #333;
+              }
+
+              .health-quiz-container .modal-header {
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  margin-bottom: 16px;
+              }
+
+              .health-quiz-container .modal-icon {
+                  font-size: 36px;
+              }
+
+              .health-quiz-container .modal-title {
+                  font-size: 24px !important;
+                  font-weight: 600 !important;
+                  color: #333 !important;
+                  margin: 0 !important;
+              }
+
+              .health-quiz-container .modal-status {
+                  display: inline-block;
+                  padding: 4px 12px;
+                  border-radius: 20px;
+                  font-size: 12px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 0.5px;
+                  margin-left: auto;
+              }
+
+              .health-quiz-container .modal-status.good {
+                  background: #e8f5e8;
+                  color: #2e7d32;
+              }
+
+              .health-quiz-container .modal-status.warning {
+                  background: #fff5e6;
+                  color: #e65100;
+              }
+
+              .health-quiz-container .modal-status.critical {
+                  background: #ffebee;
+                  color: #c62828;
+              }
+
+              .health-quiz-container .modal-description {
+                  font-size: 16px;
+                  color: #333;
+                  line-height: 1.6;
+                  margin-bottom: 20px;
+              }
+
+              .health-quiz-container .modal-recommendations {
+                  background: #f8f9fa;
+                  border-radius: 12px;
+                  padding: 16px;
+              }
+
+              .health-quiz-container .modal-recommendations h4 {
+                  font-size: 16px !important;
+                  font-weight: 600 !important;
+                  color: #333 !important;
+                  margin: 0 0 12px 0 !important;
+              }
+
+              .health-quiz-container .modal-recommendations ul {
+                  margin: 0;
+                  padding-left: 20px;
+              }
+
+              .health-quiz-container .modal-recommendations li {
+                  font-size: 14px;
+                  color: #666;
+                  line-height: 1.5;
+                  margin-bottom: 8px;
+              }
+
+              @media (max-width: 500px) {
+                  .health-quiz-container .issues-grid {
+                      gap: 8px;
+                      padding-bottom: 8px;
+                  }
+
+                  .health-quiz-container .issue-card {
+                      min-width: 120px;
+                      max-width: 120px;
+                      padding: 12px 8px;
+                  }
+
+                  .health-quiz-container .modal-content {
+                      margin: 20px;
+                      padding: 20px;
+                      max-width: none;
+                      width: calc(100% - 40px);
+                  }
+              }
+
+              .health-quiz-container .journey-scroll {
+                  width: 100%;
+                  overflow-x: auto;
+                  overflow-y: hidden;
+                  margin: 24px 0 0 0;
+                  padding-bottom: 8px;
+                  -webkit-overflow-scrolling: touch;
+                  scrollbar-width: none; /* Firefox */
+                  -ms-overflow-style: none; /* Internet Explorer 10+ */
+              }
+
+              .health-quiz-container .journey-scroll::-webkit-scrollbar {
+                  display: none; /* Safari and Chrome */
+              }
+
+              .health-quiz-container .issue-card.warning {
+                  border-color: #ff9800;
+                  background: linear-gradient(135deg, #fff5e6, #ffffff);
+              }
+
+              .health-quiz-container .issue-card.critical {
+                  border-color: #f44336;
+                  background: linear-gradient(135deg, #ffebee, #ffffff);
+              }
+
+              .health-quiz-container .issue-card.good {
+                  border-color: #4caf50;
+                  background: linear-gradient(135deg, #e8f5e8, #ffffff);
+              }
+
+              /* Product Recommendation Styles */
+              .health-quiz-container .product-recommendation {
+                  transition: all 0.3s ease;
+              }
+
+              .health-quiz-container .product-recommendation:hover {
+                  transform: translateY(-2px);
+                  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+              }
+
+              .health-quiz-container .product-recommendation button:hover {
+                  background-color: #e69a89 !important;
+              }
+
+              @media (max-width: 500px) {
+                  .health-quiz-container .product-recommendation {
+                      flex-direction: column;
+                      text-align: center;
+                      gap: 12px;
+                  }
+
+                  .health-quiz-container .product-details {
+                      order: 2;
+                  }
+
+                  .health-quiz-container .product-action {
+                      order: 3;
+                      width: 100%;
+                  }
+
+                  .health-quiz-container .product-action button {
+                      width: 100%;
+                      padding: 14px 20px;
+                  }
+              }
+    </style>
+  </head>
+  <body>
+    <div class="health-quiz-container">
+      <div class="quiz-wrapper">
+        <div class="container">
+          <!-- Welcome Page -->
+          <div class="welcome-page" id="welcomePage">
+            <h1 class="welcome-title">{{ quiz_title }}</h1>
+            <p class="welcome-text">{{ quiz_description }}</p>
+            <button class="start-btn" onclick="startQuiz()">{{ start_button_text }}</button>
+          </div>
+
+          <!-- Quiz Content -->
+          <div class="quiz-content" id="quizContent">
+            <div class="progress-bar">
+              <span id="progress"></span>
+            </div>
+            <button class="back-btn" onclick="goBack()">← Go back</button>
+            <form id="quizForm">
+              <!-- Section 1: Basic Information -->
+              <div class="option-group active" data-step="1">
+                <h2>Basic Information</h2>
+
+                <h3>What's your age?</h3>
+                <input class="form-input" min="1" name="age" placeholder="Enter your age" required type="number">
+
+                <h3>What's your gender?</h3>
+                <input id="gender1" name="gender" value="Male" required type="radio">
+                <label class="option-label" for="gender1">
+                  <span class="option-title">Male</span>
+                </label>
+                <input id="gender2" name="gender" value="Female" type="radio">
+                <label class="option-label" for="gender2">
+                  <span class="option-title">Female</span>
+                </label>
+                <input id="gender3" name="gender" value="Other" type="radio">
+                <label class="option-label" for="gender3">
+                  <span class="option-title">Other</span>
+                </label>
+
+                <h3>What's your height (in cm)?</h3>
+                <input
+                  class="form-input"
+                  min="1"
+                  name="height_cm"
+                  placeholder="Enter your height in cm"
+                  required
+                  type="number"
+                >
+
+                <h3>What's your weight (in kg)?</h3>
+                <input
+                  class="form-input"
+                  min="1"
+                  name="weight"
+                  placeholder="Enter your weight in kg"
+                  required
+                  type="number"
+                >
+
+                <h3>Do you have any of the following conditions?</h3>
+                <div class="pcos-option" id="pcosOption">
+                  <input id="condition1" name="condition" value="PCOS" type="checkbox">
+                  <label class="option-label" for="condition1">
+                    <span class="option-title">PCOS</span>
+                  </label>
+                </div>
+                <input id="condition2" name="condition" value="Hypothyroidism" type="checkbox">
+                <label class="option-label" for="condition2">
+                  <span class="option-title">Hypothyroidism</span>
+                </label>
+                <input id="condition3" name="condition" value="Diabetes" type="checkbox">
+                <label class="option-label" for="condition3">
+                  <span class="option-title">Diabetes</span>
+                </label>
+                <input id="condition4" name="condition" value="Prediabetes" type="checkbox">
+                <label class="option-label" for="condition4">
+                  <span class="option-title">Prediabetes</span>
+                </label>
+                <input id="condition5" name="condition" value="None" type="checkbox">
+                <label class="option-label" for="condition5">
+                  <span class="option-title">None</span>
+                </label>
+
+                <div
+                  id="bmi-display"
+                  style="margin-top: 20px; padding: 16px; background: #f0f8ff; border-radius: 8px; display: none;"
+                >
+                  <h4 style="margin: 0 0 8px 0; color: #333;">Your BMI: <span id="bmi-value"></span></h4>
+                  <p style="margin: 0; color: #666; font-size: 14px;" id="bmi-category"></p>
+                </div>
+              </div>
+
+              <!-- Section 2: Lifestyle & Activity -->
+              <div class="option-group" data-step="2">
+                <h2>Lifestyle & Activity</h2>
+
+                <h3>How physically active are you on most days?</h3>
+                <input id="activity1" name="activity" value="Sedentary" required type="radio">
+                <label class="option-label" for="activity1">
+                  <span class="option-title">Sedentary</span>
+                </label>
+                <input id="activity2" name="activity" value="Light" type="radio">
+                <label class="option-label" for="activity2">
+                  <span class="option-title">Light</span>
+                </label>
+                <input id="activity3" name="activity" value="Moderate" type="radio">
+                <label class="option-label" for="activity3">
+                  <span class="option-title">Moderate</span>
+                </label>
+                <input id="activity4" name="activity" value="Intense" type="radio">
+                <label class="option-label" for="activity4">
+                  <span class="option-title">Intense</span>
+                </label>
+
+                <h3>How many hours do you sleep daily on average?</h3>
+                <input id="sleep1" name="sleep" value="<5" required type="radio">
+                <label class="option-label" for="sleep1">
+                  <span class="option-title">&lt;5</span>
+                </label>
+                <input id="sleep2" name="sleep" value="5-6" type="radio">
+                <label class="option-label" for="sleep2">
+                  <span class="option-title">5-6</span>
+                </label>
+                <input id="sleep3" name="sleep" value="7-8" type="radio">
+                <label class="option-label" for="sleep3">
+                  <span class="option-title">7-8</span>
+                </label>
+                <input id="sleep4" name="sleep" value="9+" type="radio">
+                <label class="option-label" for="sleep4">
+                  <span class="option-title">9+</span>
+                </label>
+              </div>
+
+              <!-- Section 3: Eating & Cravings -->
+              <div class="option-group" data-step="3">
+                <h2>Eating & Cravings</h2>
+
+                <h3>Do you face any gut issues, indigestions or bloating?</h3>
+                <input id="gut1" name="gut_issues" value="Gut issues" required type="radio">
+                <label class="option-label" for="gut1">
+                  <span class="option-title">Gut issues</span>
+                </label>
+                <input id="gut2" name="gut_issues" value="Indigestion" type="radio">
+                <label class="option-label" for="gut2">
+                  <span class="option-title">Indigestion</span>
+                </label>
+                <input id="gut3" name="gut_issues" value="Bloating" type="radio">
+                <label class="option-label" for="gut3">
+                  <span class="option-title">Bloating</span>
+                </label>
+                <input id="gut4" name="gut_issues" value="None" type="radio">
+                <label class="option-label" for="gut4">
+                  <span class="option-title">None</span>
+                </label>
+
+                <h3>Do you crave sugar or snacks frequently?</h3>
+                <input id="crave1" name="crave" value="Yes" required type="radio">
+                <label class="option-label" for="crave1">
+                  <span class="option-title">Yes</span>
+                </label>
+                <input id="crave2" name="crave" value="No" type="radio">
+                <label class="option-label" for="crave2">
+                  <span class="option-title">No</span>
+                </label>
+              </div>
+
+              <!-- Section 4: Weight Goals & Attempts -->
+              <div class="option-group" data-step="4">
+                <h2>Weight Goals & Attempts</h2>
+
+                <h3>Have you gained weight in the past few months?</h3>
+                <input id="weight_gain1" name="weight_gain" value="Yes" required type="radio">
+                <label class="option-label" for="weight_gain1">
+                  <span class="option-title">Yes</span>
+                </label>
+                <input id="weight_gain2" name="weight_gain" value="No" type="radio">
+                <label class="option-label" for="weight_gain2">
+                  <span class="option-title">No</span>
+                </label>
+
+                <h3>What is your current goal?</h3>
+                <input id="goal1" name="goal" value="Lose weight" required type="radio">
+                <label class="option-label" for="goal1">
+                  <span class="option-title">Lose weight</span>
+                </label>
+                <input id="goal2" name="goal" value="Maintain" type="radio">
+                <label class="option-label" for="goal2">
+                  <span class="option-title">Maintain</span>
+                </label>
+                <input id="goal3" name="goal" value="Tone up" type="radio">
+                <label class="option-label" for="goal3">
+                  <span class="option-title">Tone up</span>
+                </label>
+              </div>
+
+              <button class="nav-btn" type="button">NEXT SECTION</button>
+            </form>
+          </div>
+
+          <!-- Results Page -->
+          <div class="results-page" id="resultsPage">
+            <h2 class="results-title">🎯 Your Lean Code Results</h2>
+
+            <div class="result-card">
+              <div class="header">
+                <div>
+                  <div class="metabolic-label">Your Metabolic Type</div>
+                  <div class="stage" id="result-type">Metabolic Type Example</div>
+                </div>
+                <div class="bmi-section">
+                  <span id="result-bmi">BMI 24.5 (Normal)</span>
+                  <img src="{{ 'bmi.png' | asset_url }}" alt="BMI" class="bmi-image">
+                </div>
+              </div>
+
+              <div class="months">Start Seeing Results In <strong>2 Months</strong></div>
+
+              <div class="progress-wrapper">
+                <div class="progress">
+                  <span>Success rate 90%</span>
+                </div>
+              </div>
+
+              <div class="description" id="result-description">
+                This is your personalized metabolic type analysis based on your quiz results.
+              </div>
+
+              <!-- Health Issues Graphics inside card -->
+              <div class="health-issues-card">
+                <h4>📊 Your Health Analysis</h4>
+                <div class="issues-grid" id="issues-grid">
+                  <!-- Issues will be dynamically added here -->
+                </div>
+              </div>
+              <!-- End of health-issues-card -->
+
+              <!-- Lean Up Journey Image (Horizontally Scrollable) -->
+              <h4 style="font-size:22px;font-weight:700;color:{{ accent_color }};margin:24px 0 16px 0;text-align:center;letter-spacing:0.8px;text-transform:uppercase;text-shadow:0 2px 4px rgba(252,192,154,0.3);position:relative;">
+                Your Lean Up Journey
+              </h4>
+              <div class="journey-scroll">
+                <div style="display:inline-block;padding:12px;background:linear-gradient(135deg,rgba(252,192,154,0.1),rgba(252,192,154,0.15));border-radius:20px;border:2px solid rgba(252,192,154,0.2);box-shadow:0 4px 12px rgba(252,192,154,0.2);">
+                  <img
+                    src="{{ 'journey.PNG' | asset_url }}"
+                    alt="Your Lean Up Journey"
+                    style="width: 600px; max-width: none; display: block; border-radius: 12px;"
+                  >
+                </div>
+              </div>
+              <!-- End Lean Up Journey Image -->
+            </div>
+
+            <!-- Doctor Consultation Card -->
+            <div class="result-card" style="display: flex; gap: 16px; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 180px;">
+                <div style="font-size: 18px; font-weight: 600; color: #222; margin-bottom: 4px;">
+                  Doctor Consultation Unlocked
+                </div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 16px;">
+                  Your personal Patch up doctor is just a click away ready to guide you through every step of your lean
+                  up journey.
+                </div>
+                <hr style="margin: 12px 0; border: none; border-top: 1px solid #eee;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  {% if section.settings.doctor_consultation_link %}
+                    <a
+                      href="{{ section.settings.doctor_consultation_link }}"
+                      style="background-color: #f8aa99; color: #fff; border: none; border-radius: 20px; padding: 8px 20px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; text-decoration: none; display: inline-block;"
+                    >
+                      {{- section.settings.book_now_text | default: 'Book Now' -}}
+                    </a>
+                  {% else %}
+                    <button style="background-color: #f8aa99; color: #fff; border: none; border-radius: 20px; padding: 8px 20px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+                      {{ section.settings.book_now_text | default: 'Book Now' }}
+                    </button>
+                  {% endif %}
+                </div>
+              </div>
+              <div style="flex-shrink: 0;">
+                <img
+                  src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=facearea&w=96&h=96&facepad=2"
+                  alt="Doctor"
+                  style="width: 72px; height: 72px; border-radius: 50%; object-fit: cover; background: #eee;"
+                >
+              </div>
+            </div>
+
+            <!-- Begin Product Recommendations -->
+            {% comment %} Quiz Result Page Example Automated product cards using Shopify Liquid {% endcomment %}
+            <div id="qrpContainer" class="qrp-container" style="display:none;">
+              <h1 class="qrp-title">Your Personalized Recommendations</h1>
+              <p class="qrp-desc">Based on your quiz answers, we've selected these perfect products for you:</p>
+              <div class="qrp-product-list" id="qrpProductList"></div>
+              
+            </div>
+            <!-- End Product Recommendations -->
+
+            <!-- End Shopify Product Recommendation Card -->
+
+            <div class="results-recommendations">
+              <h4>💡 Personalized Recommendations:</h4>
+              <ul id="result-recommendations">
+                <li>Your recommendations will appear here...</li>
+              </ul>
+            </div>
+
+            <button class="restart-btn" onclick="restartQuiz()">Take Quiz Again</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading Screen -->
+      <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">We're analyzing your metabolic type...</div>
+        <div class="loading-subtext">
+          Hang tight! We're crunching the numbers to create your personalized health profile.
+        </div>
+      </div>
+
+      <!-- Health Detail Modal (for health cards) -->
+      <div class="health-modal" id="healthDetailModal">
+        <div class="modal-content">
+          <button class="modal-close" onclick="closeHealthDetail()">×</button>
+          <div class="modal-header">
+            <span class="modal-icon">🌟</span>
+            <h3 class="modal-title">Health Detail</h3>
+            <span class="modal-status good">Status: Good</span>
+          </div>
+          <div class="modal-description">
+            Detailed information about this health aspect will be shown here. It may include causes, effects, and links
+            to resources or recommendations.
+          </div>
+          <div class="modal-recommendations">
+            <h4>Recommendations:</h4>
+            <ul>
+              <li>Maintain a balanced diet rich in whole foods.</li>
+              <li>Engage in regular physical activity (at least 150 minutes per week).</li>
+              <li>Get adequate sleep (7-9 hours per night).</li>
+              <li>Manage stress through mindfulness or relaxation techniques.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Shopify asset URLs
+      const assetUrls = {
+        sleep: "{{ 'sleep.svg' | asset_url }}",
+        activity: "{{ 'activity.svg' | asset_url }}",
+        weight: "{{ 'weight.svg' | asset_url }}",
+        nutrition: "{{ 'nutrition.svg' | asset_url }}",
+        lifestyle: "{{ 'lifestyle.svg' | asset_url }}",
+      };
+
+      // Shopify shop configuration
+      const shopConfig = {
+        shopDomain: '{{ shop.permanent_domain }}',
+        cartUrl: '{{ routes.cart_url }}',
+        searchUrl: '{{ routes.search_url }}',
+        collectionsUrl: '{{ routes.collections_url }}',
+      };
+
+      let currentStep = 1;
+      const totalSteps = document.querySelectorAll('.option-group').length;
+      const progressBar = document.getElementById('progress');
+      const navBtn = document.querySelector('.nav-btn');
+
+      function startQuiz() {
+        // Hide welcome page and show quiz content
+        document.getElementById('welcomePage').classList.add('hidden');
+        document.getElementById('quizContent').classList.add('active');
+      }
+
+      function updateButtonText() {
+        navBtn.textContent = currentStep === totalSteps ? 'SUBMIT QUIZ' : 'NEXT SECTION';
+        navBtn.onclick = currentStep === totalSteps ? submitQuiz : nextStep;
+      }
+
+      function nextStep() {
+        navBtn.classList.add('loading');
+        setTimeout(() => {
+          if (currentStep < totalSteps) {
+            const currentGroup = document.querySelector(`.option-group[data-step='${currentStep}']`);
+            let valid = true;
+
+            // Validate all required fields in the current section
+            const numberInputs = currentGroup.querySelectorAll('input[type="number"]');
+            numberInputs.forEach((input) => {
+              if (input.hasAttribute('required')) {
+                const value = input.value.trim();
+                if (value === '' || Number(value) <= 0) {
+                  valid = false;
+                  input.focus();
+                }
+              }
+            });
+
+            // Validate radio groups
+            const radioGroups = new Set();
+            currentGroup.querySelectorAll('input[type="radio"][required]').forEach((radio) => {
+              radioGroups.add(radio.name);
+            });
+
+            radioGroups.forEach((groupName) => {
+              const checked = currentGroup.querySelector(`input[type='radio'][name='${groupName}']:checked`);
+              if (!checked) {
+                valid = false;
+              }
+            });
+
+            // For section 4, validate both radio groups
+            if (currentStep === 4) {
+              // Validate weight_gain radio group
+              const weightGainChecked = currentGroup.querySelector('input[name="weight_gain"]:checked');
+              if (!weightGainChecked) {
+                valid = false;
+              }
+
+              // Validate goal radio group
+              const goalChecked = currentGroup.querySelector('input[name="goal"]:checked');
+              if (!goalChecked) {
+                valid = false;
+              }
+            }
+
+            if (!valid) {
+              navBtn.classList.remove('loading');
+              alert('Please complete all required fields in this section.');
+              return;
+            }
+
+            const nextGroup = document.querySelector(`.option-group[data-step='${currentStep + 1}']`);
+            currentGroup.classList.remove('active');
+            currentGroup.classList.add('fade-out');
+
+            setTimeout(() => {
+              currentGroup.style.display = 'none';
+              currentGroup.classList.remove('fade-out');
+              nextGroup.style.display = 'block';
+              nextGroup.classList.add('fade-in', 'active');
+
+              setTimeout(() => {
+                nextGroup.classList.remove('fade-in');
+              }, 300);
+
+              currentStep++;
+              progressBar.style.width = ((currentStep - 1) / (totalSteps - 1)) * 100 + '%';
+              navBtn.classList.remove('loading');
+              updateButtonText();
+            }, 300);
+          }
+        }, 400);
+      }
+
+      function goBack() {
+        if (currentStep > 1) {
+          const currentGroup = document.querySelector(`.option-group[data-step='${currentStep}']`);
+          const prevGroup = document.querySelector(`.option-group[data-step='${currentStep - 1}']`);
+          currentGroup.classList.remove('active');
+          currentGroup.style.display = 'none';
+          prevGroup.style.display = 'block';
+          prevGroup.classList.add('active');
+          currentStep--;
+          progressBar.style.width = ((currentStep - 1) / (totalSteps - 1)) * 100 + '%';
+          updateButtonText();
+        } else {
+          // Go back to welcome page
+          document.getElementById('quizContent').classList.remove('active');
+          document.getElementById('welcomePage').classList.remove('hidden');
+          // Reset quiz state
+          currentStep = 1;
+          progressBar.style.width = '0%';
+          const currentGroup = document.querySelector('.option-group.active');
+          if (currentGroup) {
+            currentGroup.classList.remove('active');
+            currentGroup.style.display = 'none';
+          }
+          const firstGroup = document.querySelector('.option-group[data-step="1"]');
+          if (firstGroup) {
+            firstGroup.classList.add('active');
+            firstGroup.style.display = 'block';
+          }
+          updateButtonText();
+        }
+      }
+
+      function submitQuiz() {
+        // First validate Section 4 before submitting
+        const currentGroup = document.querySelector(`.option-group[data-step='4']`);
+        let valid = true;
+
+        // Validate weight_gain radio group
+        const weightGainChecked = currentGroup.querySelector('input[name="weight_gain"]:checked');
+        if (!weightGainChecked) {
+          valid = false;
+        }
+
+        // Validate goal radio group
+        const goalChecked = currentGroup.querySelector('input[name="goal"]:checked');
+        if (!goalChecked) {
+          valid = false;
+        }
+
+        if (!valid) {
+          alert('Please complete all required fields in this section.');
+          return;
+        }
+
+        const form = document.getElementById('quizForm');
+        const formData = new FormData(form);
+
+        // Show loading screen
+        const loadingScreen = document.getElementById('loadingScreen');
+        loadingScreen.classList.add('active');
+
+        // Hide the main quiz
+        document.querySelector('.quiz-wrapper').style.display = 'none';
+
+        // Collect all form data
+        const results = {};
+        for (let [key, value] of formData.entries()) {
+          if (results[key]) {
+            // Handle multiple values (checkboxes)
+            if (Array.isArray(results[key])) {
+              results[key].push(value);
+            } else {
+              results[key] = [results[key], value];
+            }
+          } else {
+            results[key] = value;
+          }
+        }
+
+        // Calculate BMI and extract data according to JSON rules
+        const height = parseFloat(results.height_cm) / 100; // convert to meters
+        const weight = parseFloat(results.weight);
+        const bmi = parseFloat((weight / (height * height)).toFixed(1));
+
+        // Extract form data
+        const age = parseInt(results.age);
+        const gender = results.gender?.toLowerCase();
+        const conditions = Array.isArray(results.condition) ? results.condition : [results.condition || 'None'];
+        const sleep = results.sleep;
+        const activity = results.activity;
+        const gutIssues = results.gut_issues && results.gut_issues !== 'None';
+        const sugarCravings = results.crave === 'Yes';
+        const recentWeightGain = results.weight_gain === 'Yes';
+
+        // Helper functions for conditions
+        const hasConditions = conditions.some((c) => c && c !== 'None');
+        const hasHormonalConditions = conditions.some((c) => c === 'PCOS' || c === 'Hypothyroidism');
+        const sleepHours = sleep === '<5' ? 4 : sleep === '5-6' ? 5.5 : sleep === '7-8' ? 7.5 : 9;
+        const isModerateOrAboveActivity = activity === 'Moderate' || activity === 'Intense';
+
+        // Determine segment based on JSON criteria
+        let segment = '';
+        let segmentPlan = {};
+
+        // Check Beginner Burner
+        if (bmi < 25 && age < 30 && !hasConditions && sleepHours >= 7 && !gutIssues && !sugarCravings) {
+          segment = 'Beginner Burner';
+          segmentPlan = {
+            lean_up_duration_days: 30,
+            add_ons: [],
+            tag: 'Beginner Burner',
+          };
+        }
+        // Check Plateaued Warrior
+        else if (bmi >= 25 && bmi <= 27.9 && isModerateOrAboveActivity && !hasConditions) {
+          segment = 'Plateaued Warrior';
+          segmentPlan = {
+            lean_up_duration_days: 60,
+            add_ons: sleepHours < 7 ? ['rest_up_if_sleep_under_7'] : [],
+            tag: 'Plateaued Warrior',
+          };
+        }
+        // Check Hormonal Hurdle - Only for women with PCOS or Hypothyroidism
+        else if (gender === 'female' && hasHormonalConditions) {
+          let duration = bmi >= 30 ? 90 : bmi >= 25 ? 60 : 30; // BMI-based duration
+          duration += 30; // Add 30 for medical condition
+          duration = Math.min(duration, 120); // Cap at 120 days
+          segment = 'Hormonal Hurdle';
+          segmentPlan = {
+            lean_up_duration_days: duration,
+            add_ons: ['d_up', ...(sleepHours < 7 ? ['rest_up_if_sleep_under_7'] : [])],
+            tag: 'Hormonal Hurdle',
+          };
+        }
+        // Check Metabolic Slowdown - BMI >= 25, or Diabetes, or Prediabetes
+        else if (bmi >= 25 || conditions.includes('Diabetes') || conditions.includes('Prediabetes')) {
+          let duration = bmi >= 30 ? 90 : bmi >= 25 ? 60 : 30; // BMI-based duration
+          if (hasConditions) duration += 30; // Add 30 for medical conditions
+          duration = Math.min(duration, 120); // Cap at 120 days
+          segment = 'Metabolic Slowdown';
+          segmentPlan = {
+            lean_up_duration_days: duration,
+            add_ons: ['rest_up', 'd_up'],
+            tag: 'Metabolic Slowdown',
+          };
+        }
+        // Check Emotional Eater - Not Hormonal Hurdle, Not Metabolic Slowdown, but has sugar cravings
+        else if (sugarCravings) {
+          let duration = bmi >= 30 ? 90 : bmi >= 25 ? 60 : 30; // BMI-based duration
+          if (hasConditions) duration += 30; // Add 30 for medical conditions
+          duration = Math.min(duration, 120); // Cap at 120 days
+          let addOns = ['rest_up'];
+          if (activity === 'Sedentary') {
+            // fatigue condition
+            addOns.push('d_up_if_fatigue');
+          }
+          segment = 'Emotional Eater';
+          segmentPlan = {
+            lean_up_duration_days: duration,
+            add_ons: addOns,
+            tag: 'Emotional Eater',
+          };
+        }
+        // Fallback logic using duration calculator
+        else {
+          let duration = 30; // default
+
+          // BMI-based duration rules
+          if (bmi >= 30) duration = 90; // Obese
+          else if (bmi >= 25) duration = 60; // Overweight (Medium BMI)
+          else duration = 30; // Normal BMI
+
+          // Apply medical condition modifier only
+          if (hasConditions) duration += 30;
+
+          // Cap at maximum 120 days
+          if (duration > 120) duration = 120;
+
+          // Determine best fitting segment based on new criteria
+          if (gender === 'female' && hasHormonalConditions) {
+            // This shouldn't happen as it should be caught above, but safety check
+            segment = 'Hormonal Hurdle';
+            segmentPlan = {
+              lean_up_duration_days: duration,
+              add_ons: ['d_up', ...(sleepHours < 7 ? ['rest_up'] : [])],
+              tag: 'Hormonal Hurdle',
+            };
+          } else if (bmi >= 25 || conditions.includes('Diabetes') || conditions.includes('Prediabetes')) {
+            // This shouldn't happen as it should be caught above, but safety check
+            segment = 'Metabolic Slowdown';
+            segmentPlan = {
+              lean_up_duration_days: duration,
+              add_ons: ['rest_up', 'd_up'],
+              tag: 'Metabolic Slowdown',
+            };
+          } else if (sugarCravings) {
+            // This shouldn't happen as it should be caught above, but safety check
+            segment = 'Emotional Eater';
+            segmentPlan = {
+              lean_up_duration_days: duration,
+              add_ons: ['rest_up', ...(activity === 'Sedentary' ? ['d_up'] : [])],
+              tag: 'Emotional Eater',
+            };
+          } else {
+            // Default to Plateaued Warrior for anyone who doesn't fit other categories
+            segment = 'Plateaued Warrior';
+            segmentPlan = {
+              lean_up_duration_days: duration,
+              add_ons: sleepHours < 7 ? ['rest_up'] : [],
+              tag: 'Plateaued Warrior',
+            };
+          }
+        }
+
+        // Calculate display score (simplified for UI)
+        // Score removed from results display
+
+        // Determine metabolic type and recommendations based on segment
+        let metabolicType = segment;
+        let description = '';
+        let recommendations = [];
+        let addOnsList = segmentPlan.add_ons || [];
+        let leanUpDuration = segmentPlan.lean_up_duration_days || 30;
+
+        if (segment === 'Beginner Burner') {
+          description = `You have an efficient metabolism with minimal risk factors (BMI ${bmi}, age ${age}). Focus on maintaining healthy habits.`;
+          recommendations = [
+            'Maintain regular exercise routine (3-4 times per week)',
+            'Focus on whole foods and balanced nutrition',
+            'Stay hydrated and prioritize quality sleep',
+            'Build sustainable healthy habits for long-term success',
+          ];
+        } else if (segment === 'Plateaued Warrior') {
+          description = `You have good activity habits but may need strategic changes to break through plateaus (BMI ${bmi}, ${activity.toLowerCase()} activity level).`;
+          recommendations = [
+            'Vary your workout routine and intensity',
+            'Consider intermittent fasting or meal timing strategies',
+            'Increase protein intake (1.2-1.6g per kg body weight)',
+            'Track your progress with measurements, not just weight',
+          ];
+          if (addOnsList.includes('rest_up_if_sleep_under_7')) {
+            recommendations.push('Consider "Rest Up" add-on for improved sleep quality under 7 hours');
+          }
+        } else if (segment === 'Hormonal Hurdle') {
+          let userConditions = conditions.filter((c) => c !== 'None').join(', ');
+          description = `Hormonal imbalances are affecting your metabolism and require targeted interventions (${userConditions}, BMI ${bmi}).`;
+          recommendations = [
+            'Consult with healthcare provider for hormone optimization',
+            'Focus on hormone-balancing foods (omega-3s, fiber, antioxidants)',
+            'Consider strength training to improve insulin sensitivity',
+            'Manage stress and prioritize sleep for hormone regulation',
+          ];
+          if (addOnsList.includes('d_up')) {
+            recommendations.push('Consider "D Up" add-on for vitamin D and hormone support');
+          }
+          if (addOnsList.includes('rest_up_if_sleep_under_7')) {
+            recommendations.push('Consider "Rest Up" add-on for improved sleep quality');
+          }
+        } else if (segment === 'Metabolic Slowdown') {
+          // Dynamic description based on actual user data
+          let metabolicFactors = [];
+          if (age >= 35) metabolicFactors.push(`age ${age}`);
+          if (bmi >= 28) metabolicFactors.push(`BMI ${bmi}`);
+          if (sugarCravings) metabolicFactors.push('sugar cravings');
+          if (activity === 'Sedentary') metabolicFactors.push('sedentary lifestyle');
+          if (hasConditions) metabolicFactors.push('medical conditions');
+
+          description = `You have metabolic factors that require comprehensive lifestyle interventions: ${metabolicFactors.join(
+            ', '
+          )}. Focus on sustainable changes for long-term health.`;
+          recommendations = [
+            'Focus on strength training to preserve muscle mass',
+            'Emphasize anti-inflammatory foods and nutrients',
+            'Consider metabolic testing for personalized approach',
+            'Address sleep quality and stress management',
+          ];
+          if (addOnsList.includes('rest_up')) {
+            recommendations.push('Consider "Rest Up" add-on for energy and recovery support');
+          }
+          if (addOnsList.includes('d_up')) {
+            recommendations.push('Consider "D Up" add-on for metabolic and vitamin support');
+          }
+        } else if (segment === 'Emotional Eater') {
+          let emotionalFactors = [];
+          if (sleepHours < 6) emotionalFactors.push(`${sleep} hours sleep`);
+          if (sugarCravings) emotionalFactors.push('sugar cravings');
+          if (gutIssues) emotionalFactors.push('digestive issues');
+          if (recentWeightGain) emotionalFactors.push('recent weight gain');
+
+          description = `You have patterns that may be affecting your weight: ${emotionalFactors.join(
+            ', '
+          )}. Focus on behavioral and digestive health.`;
+          recommendations = [
+            'Address digestive health with gut-healing protocols',
+            'Work on establishing regular eating patterns',
+            'Consider working with a nutritionist for meal planning',
+            'Focus on stress management and mindful eating practices',
+          ];
+          if (addOnsList.includes('rest_up')) {
+            recommendations.push('Consider "Rest Up" add-on for stress and sleep support');
+          }
+          if (addOnsList.includes('d_up_if_fatigue')) {
+            recommendations.push('Consider "D Up" add-on for fatigue and energy support');
+          }
+        }
+
+        // Add general recommendation about Lean Up duration
+        recommendations.push(`Recommended Lean Up program duration: ${leanUpDuration} days`);
+
+        // BMI Category
+        let bmiCategory = '';
+        if (bmi < 18.5) bmiCategory = 'Underweight';
+        else if (bmi < 25) bmiCategory = 'Normal weight';
+        else if (bmi < 30) bmiCategory = 'Overweight';
+        else bmiCategory = 'Obese';
+
+        // Simulate processing time (3-5 seconds)
+        const processingTime = 3000 + Math.random() * 2000; // 3-5 seconds
+
+        setTimeout(() => {
+          // Hide loading screen
+          loadingScreen.classList.remove('active');
+
+          // Show the quiz wrapper again
+          document.querySelector('.quiz-wrapper').style.display = 'block';
+
+          // Hide quiz content and show results page
+          document.getElementById('quizContent').classList.remove('active');
+          document.getElementById('resultsPage').classList.add('active');
+
+          // Save quiz results to customer (if logged in)
+          if (window.customerInfo && window.customerInfo.isLoggedIn) {
+            saveQuizResults({
+              metabolicType: metabolicType,
+              bmi: bmi,
+              bmiCategory: bmiCategory,
+              segment: segment,
+              leanUpDuration: leanUpDuration,
+              recommendations: recommendations,
+              timestamp: new Date().toISOString(),
+            });
+          }
+
+          // Populate results
+          document.getElementById('result-bmi').textContent = `${bmi} (${bmiCategory})`;
+          document.getElementById('result-type').textContent = metabolicType;
+          document.getElementById('result-description').textContent = description;
+
+          // Populate recommendations
+          const recommendationsList = document.getElementById('result-recommendations');
+          recommendationsList.innerHTML = '';
+          recommendations.forEach((rec) => {
+            const li = document.createElement('li');
+            li.textContent = rec;
+            recommendationsList.appendChild(li);
+          });
+
+          // Display personalized health graphics
+          displayHealthIssues(results, bmi, sleepHours, activity, gutIssues, sugarCravings);
+
+          // Log detailed results for debugging
+          console.log('Quiz Results:', {
+            formData: results,
+            bmi: bmi,
+            bmiCategory: bmiCategory,
+            metabolicType: metabolicType,
+            segment: segment,
+            segmentPlan: segmentPlan,
+            leanUpDuration: leanUpDuration,
+            addOns: addOnsList,
+            recommendations: recommendations,
+          });
+          // Show only recommended product cards
+          // ===== build full recommendation list =====
+          const qrpContainer = document.getElementById('qrpContainer');
+          const qrpProductList = document.getElementById('qrpProductList');
+
+          // clear out any old cards
+          qrpProductList.innerHTML = '';
+
+          // always include the base product
+          // always include the base product
+          let recommendedHandles = ['lean-up'];
+
+          // append any add-ons, mapping conditional keys back to their base handle
+          if (segmentPlan.add_ons && segmentPlan.add_ons.length) {
+            segmentPlan.add_ons.forEach((addOn) => {
+              // strip off any "_if_..." suffix, then convert underscores to hyphens
+              const baseKey = addOn.replace(/_if.*$/, '');
+              const handleKey = baseKey.replace(/_/g, '-');
+              if (!recommendedHandles.includes(handleKey)) {
+                recommendedHandles.push(handleKey);
+              }
+            });
+          }
+
+          // now render **all** of them
+          recommendedHandles.forEach((handle) => {
+            const product = window.all_products[handle];
+            if (!product) return;
+
+            const card = document.createElement('div');
+            card.className = 'qrp-product-card';
+            card.innerHTML = `
+    <div class="qrp-product-image">
+      <a href="${product.url}">
+        <img class="qrp-product-img"
+             src="${product.featured_image}"
+             alt="${product.title}"
+             width="120" height="120">
+      </a>
+    </div>
+    <div class="qrp-product-content">
+      <div class="qrp-product-info">
+        <h2 class="qrp-product-title">${product.title}</h2>
+        <p class="qrp-product-desc">${product.description}</p>
+      </div>
+      <div class="qrp-product-controls">
+        <form method="post" action="/cart/add" class="qrp-cart-form">
+          <input type="hidden" name="id" value="${product.variants[0].id}">
+          <div class="qrp-quantity-add-wrapper">
+            <input type="number" name="quantity" value="1" min="1" class="qrp-quantity-input">
+            <button type="submit" class="qrp-add-cart-btn">Add to Cart</button>
+          </div>
+        </form>
+      </div>
+    </div>`;
+            qrpProductList.appendChild(card);
+          });
+
+          // finally un-hide the recommendations
+          qrpContainer.style.display = 'block';
+        }, processingTime);
+      }
+
+      // Save quiz results to localStorage and optionally to customer metafields
+      function saveQuizResults(results) {
+        // Save to localStorage for non-logged-in users or as backup
+        localStorage.setItem('healthQuizResults', JSON.stringify(results));
+
+        // If customer is logged in, attempt to save to customer metafields
+        if (window.customerInfo && window.customerInfo.isLoggedIn) {
+          // This would require a server-side endpoint to save to Shopify
+          console.log('Quiz results saved for customer:', window.customerInfo.email, results);
+
+          // You could implement an AJAX call here to save to customer metafields
+          // Example:
+          // fetch('/apps/quiz/save-results', {
+          //     method: 'POST',
+          //     headers: { 'Content-Type': 'application/json' },
+          //     body: JSON.stringify({
+          //         customer_id: window.customerInfo.id,
+          //         results: results
+          //     })
+          // });
+        }
+      }
+
+      function displayHealthIssues(results, bmi, sleepHours, activity, gutIssues, sugarCravings) {
+        const issuesGrid = document.getElementById('issues-grid');
+        issuesGrid.innerHTML = '';
+
+        const healthCards = [];
+
+        // Sleep Analysis
+        let sleepStatus = 'good';
+        let sleepMessage = 'Optimal sleep duration';
+        if (sleepHours < 6) {
+          sleepStatus = 'critical';
+          sleepMessage = 'Poor sleep disrupts metabolism and increases cravings';
+        } else if (sleepHours < 7) {
+          sleepStatus = 'warning';
+          sleepMessage = 'Below recommended sleep duration';
+        }
+
+        healthCards.push({
+          icon: assetUrls.sleep,
+          title: 'Sleep',
+          status: sleepStatus,
+          message: sleepMessage,
+        });
+
+        // Activity Analysis
+        let activityStatus = 'good';
+        let activityMessage = 'Good activity level';
+        if (activity === 'Sedentary') {
+          activityStatus = 'critical';
+          activityMessage = 'Low activity slows metabolism and affects weight management';
+        } else if (activity === 'Light') {
+          activityStatus = 'warning';
+          activityMessage = 'Could benefit from more physical activity';
+        }
+
+        healthCards.push({
+          icon: assetUrls.activity,
+          title: 'Activity',
+          status: activityStatus,
+          message: activityMessage,
+        });
+
+        // Weight Status
+        let weightStatus = 'good';
+        let weightMessage = 'Healthy weight range';
+        if (bmi >= 30) {
+          weightStatus = 'critical';
+          weightMessage = 'Weight may impact overall health and metabolism';
+        } else if (bmi >= 25) {
+          weightStatus = 'warning';
+          weightMessage = 'Above ideal weight range';
+        } else if (bmi < 18.5) {
+          weightStatus = 'warning';
+          weightMessage = 'Below healthy weight range';
+        }
+
+        healthCards.push({
+          icon: assetUrls.weight,
+          title: 'Weight',
+          status: weightStatus,
+          message: weightMessage,
+        });
+
+        // Nutrition/Cravings Analysis
+        let nutritionStatus = 'good';
+        let nutritionMessage = 'Good eating habits';
+        if (sugarCravings && gutIssues) {
+          nutritionStatus = 'critical';
+          nutritionMessage = 'Sugar cravings and digestive issues affect metabolism';
+        } else if (sugarCravings) {
+          nutritionStatus = 'warning';
+          nutritionMessage = 'Frequent sugar cravings may indicate blood sugar imbalances';
+        } else if (gutIssues) {
+          nutritionStatus = 'warning';
+          nutritionMessage = 'Digestive issues can affect nutrient absorption';
+        }
+
+        healthCards.push({
+          icon: assetUrls.nutrition,
+          title: 'Nutrition',
+          status: nutritionStatus,
+          message: nutritionMessage,
+        });
+
+        // Medical Conditions
+        const conditions = Array.isArray(results.condition) ? results.condition : [results.condition || 'None'];
+        const hasConditions = conditions.some((c) => c && c !== 'None');
+
+        if (hasConditions) {
+          let conditionStatus = 'warning';
+          let conditionMessage = 'Managing health conditions that affect metabolism';
+
+          if (conditions.includes('PCOS') || conditions.includes('Hypothyroidism')) {
+            conditionStatus = 'critical';
+            conditionMessage = 'Hormonal conditions require targeted approach';
+          }
+
+          healthCards.push({
+            icon: assetUrls.lifestyle,
+            title: 'Health Conditions',
+            status: conditionStatus,
+            message: conditionMessage,
+          });
+        }
+
+        // Stress/Lifestyle
+        let stressStatus = 'good';
+        let stressMessage = 'Good lifestyle balance';
+
+        if (sleepHours < 6 && activity === 'Sedentary') {
+          stressStatus = 'critical';
+          stressMessage = 'Poor sleep and low activity indicate high stress levels';
+        } else if (sugarCravings && results.weight_gain === 'Yes') {
+          stressStatus = 'warning';
+          stressMessage = 'Weight gain and cravings may indicate stress eating';
+        }
+
+        healthCards.push({
+          icon: assetUrls.lifestyle,
+          title: 'Lifestyle',
+          status: stressStatus,
+          message: stressMessage,
+        });
+
+        // Create and append cards
+        healthCards.forEach((card) => {
+          const cardElement = document.createElement('div');
+          cardElement.className = `issue-card ${card.status}`;
+          cardElement.innerHTML = `
+                    <img src="${card.icon}" alt="${card.title}" class="issue-icon-svg">
+                    <div class="issue-title">${card.title}</div>
+                    <div class="issue-status">${card.message}</div>
+                `;
+
+          // Add click handler to open modal
+          cardElement.addEventListener('click', () => {
+            showHealthDetail(card);
+          });
+
+          issuesGrid.appendChild(cardElement);
+        });
+      }
+
+      // Health Detail Modal Functions
+      function showHealthDetail(card) {
+        const modal = document.getElementById('healthDetailModal');
+        const modalIcon = modal.querySelector('.modal-icon');
+        const modalTitle = modal.querySelector('.modal-title');
+        const modalStatus = modal.querySelector('.modal-status');
+        const modalDescription = modal.querySelector('.modal-description');
+        const modalRecommendations = modal.querySelector('.modal-recommendations ul');
+
+        // Update modal content based on card
+        modalIcon.textContent = card.icon;
+        modalTitle.textContent = card.title;
+        modalStatus.textContent = `Status: ${card.status.charAt(0).toUpperCase() + card.status.slice(1)}`;
+        modalStatus.className = `modal-status ${card.status}`;
+
+        // Get detailed content based on card type
+        const detailContent = getDetailedHealthContent(card);
+        modalDescription.textContent = detailContent.description;
+
+        // Update recommendations
+        modalRecommendations.innerHTML = '';
+        detailContent.recommendations.forEach((rec) => {
+          const li = document.createElement('li');
+          li.textContent = rec;
+          modalRecommendations.appendChild(li);
+        });
+
+        // Show modal
+        modal.classList.add('active');
+      }
+
+      function closeHealthDetail() {
+        const modal = document.getElementById('healthDetailModal');
+        modal.classList.remove('active');
+      }
+
+      function getDetailedHealthContent(card) {
+        const contentMap = {
+          Sleep: {
+            description:
+              card.status === 'critical'
+                ? "Poor sleep quality significantly disrupts your metabolism, increases stress hormones like cortisol, and leads to increased hunger and cravings. When you don't get enough sleep, your body produces more ghrelin (hunger hormone) and less leptin (satiety hormone), making weight management much more difficult."
+                : card.status === 'warning'
+                ? 'Getting slightly less sleep than recommended can still impact your energy levels and metabolism. While not critical, improving your sleep duration and quality can help optimize your health and weight management efforts.'
+                : 'Your sleep duration appears to be in a healthy range. Quality sleep is essential for maintaining a healthy metabolism, proper hormone balance, and overall well-being. Continue prioritizing good sleep hygiene.',
+            recommendations:
+              card.status === 'critical' || card.status === 'warning'
+                ? [
+                    'Aim for 7-9 hours of sleep per night',
+                    'Create a consistent bedtime routine',
+                    'Avoid screens 1 hour before bed',
+                    'Keep your bedroom cool, dark, and quiet',
+                    'Limit caffeine after 2 PM',
+                    'Consider a sleep study if problems persist',
+                  ]
+                : [
+                    'Maintain your current sleep schedule',
+                    'Continue good sleep hygiene practices',
+                    'Monitor sleep quality with a sleep tracker if desired',
+                    'Adjust bedtime if life circumstances change',
+                  ],
+          },
+          Activity: {
+            description:
+              card.status === 'critical'
+                ? 'A sedentary lifestyle significantly slows your metabolism and makes weight management very challenging. Lack of physical activity leads to muscle loss, reduced insulin sensitivity, and lower calorie burn throughout the day. This creates a cycle where weight gain becomes easier and weight loss becomes much harder.'
+                : card.status === 'warning'
+                ? 'Light activity is better than none, but increasing your movement can significantly boost your metabolism and improve your overall health. Even small increases in daily activity can make a meaningful difference in how you feel and how your body processes food.'
+                : 'Your activity level appears healthy! Regular physical activity boosts metabolism, improves insulin sensitivity, and helps maintain muscle mass, all of which support healthy weight management.',
+            recommendations:
+              card.status === 'critical'
+                ? [
+                    'Start with 10-15 minutes of walking daily',
+                    'Take stairs instead of elevators when possible',
+                    'Set reminders to stand and move every hour',
+                    'Find activities you enjoy (dancing, swimming, sports)',
+                    'Gradually increase to 150 minutes of moderate activity per week',
+                    'Consider strength training 2-3 times per week',
+                  ]
+                : card.status === 'warning'
+                ? [
+                    'Increase daily movement by 15-30 minutes',
+                    'Add more vigorous activities to your routine',
+                    'Try high-intensity interval training (HIIT)',
+                    'Include strength training exercises',
+                    'Find active hobbies you enjoy',
+                  ]
+                : [
+                    'Continue your current activity level',
+                    'Vary your exercise routine to prevent boredom',
+                    'Challenge yourself with new activities',
+                    'Monitor your progress and adjust as needed',
+                  ],
+          },
+          Weight: {
+            description:
+              card.status === 'critical'
+                ? 'Your current weight may be impacting your overall health and making it harder for your body to regulate blood sugar, hormones, and metabolism efficiently. Excess weight, particularly around the midsection, can lead to insulin resistance and increased inflammation, creating additional challenges for healthy weight management.'
+                : card.status === 'warning'
+                ? "You're above the ideal weight range, which may start to impact your metabolism and energy levels. Making some adjustments to your lifestyle can help you move toward a healthier weight range and improve how you feel day-to-day."
+                : 'Your weight appears to be in a healthy range. Maintaining this weight through balanced nutrition and regular activity will support your long-term health and energy levels.',
+            recommendations:
+              card.status === 'critical' || card.status === 'warning'
+                ? [
+                    'Focus on sustainable, gradual weight loss (1-2 lbs per week)',
+                    'Create a moderate calorie deficit through diet and exercise',
+                    'Prioritize protein at each meal to maintain muscle mass',
+                    'Eat plenty of vegetables and fiber-rich foods',
+                    'Stay hydrated with water throughout the day',
+                    'Consider working with a registered dietitian',
+                    'Track your progress with measurements, not just the scale',
+                  ]
+                : [
+                    'Maintain your current healthy habits',
+                    'Focus on body composition over just weight',
+                    'Continue balanced nutrition and regular exercise',
+                    'Monitor for any significant changes',
+                  ],
+          },
+          Nutrition: {
+            description:
+              card.status === 'critical'
+                ? 'Frequent sugar cravings combined with digestive issues suggest significant imbalances in your blood sugar regulation and gut health. This combination can create a cycle where poor digestion leads to nutrient deficiencies, which then trigger more cravings and further digestive problems, making weight management very difficult.'
+                : card.status === 'warning'
+                ? card.message.includes('sugar cravings')
+                  ? 'Frequent sugar cravings often indicate blood sugar imbalances or insufficient protein and fiber in your diet. These cravings can sabotage weight management efforts and lead to energy crashes throughout the day.'
+                  : 'Digestive issues can significantly impact how well your body absorbs nutrients from food, potentially leading to deficiencies that trigger cravings and affect your metabolism. Improving gut health is crucial for overall wellness.'
+                : 'Your eating habits appear to be supporting your health goals well. Balanced nutrition with minimal cravings and good digestion creates the foundation for sustainable weight management.',
+            recommendations:
+              card.status === 'critical' || card.status === 'warning'
+                ? [
+                    'Eat protein with every meal and snack',
+                    'Include fiber-rich vegetables and fruits',
+                    'Avoid processed foods and added sugars',
+                    'Stay hydrated (8-10 glasses of water daily)',
+                    'Consider probiotics for gut health',
+                    'Eat regular, balanced meals to stabilize blood sugar',
+                    'Keep a food diary to identify trigger foods',
+                  ]
+                : [
+                    'Continue your balanced approach to nutrition',
+                    'Maintain variety in your diet',
+                    "Listen to your body's hunger and fullness cues",
+                    'Stay consistent with your healthy habits',
+                  ],
+          },
+          'Health Conditions': {
+            description:
+              card.status === 'critical'
+                ? "Hormonal conditions like PCOS or hypothyroidism significantly affect your metabolism and can make traditional weight loss approaches less effective. These conditions often require a more targeted approach that addresses the underlying hormonal imbalances while supporting your body's unique needs."
+                : 'Managing health conditions while trying to maintain or lose weight requires special consideration. Your medical conditions may affect how your body processes food, stores fat, or responds to exercise, making it important to work with healthcare providers who understand these complexities.',
+            recommendations:
+              card.status === 'critical'
+                ? [
+                    'Work closely with an endocrinologist or specialist',
+                    'Consider a low-glycemic diet to support blood sugar balance',
+                    'Focus on anti-inflammatory foods',
+                    'Manage stress through meditation or yoga',
+                    'Get regular blood work to monitor hormone levels',
+                    'Consider supplements as recommended by your doctor',
+                    'Be patient - hormonal healing takes time',
+                  ]
+                : [
+                    "Follow your doctor's treatment recommendations",
+                    'Maintain regular check-ups and monitoring',
+                    'Adapt your lifestyle approach based on your condition',
+                    'Stay informed about your condition and new treatments',
+                    'Connect with support groups if helpful',
+                  ],
+          },
+          Lifestyle: {
+            description:
+              card.status === 'critical'
+                ? 'The combination of poor sleep and low activity suggests high stress levels that are significantly impacting your health. Chronic stress elevates cortisol, which promotes fat storage (especially around the midsection) and makes it extremely difficult to lose weight, even with diet changes.'
+                : card.status === 'warning'
+                ? 'Stress eating patterns and weight gain often go hand in hand, creating a cycle where stress leads to poor food choices, which then leads to guilt and more stress. Breaking this cycle is crucial for both mental and physical health.'
+                : 'Your lifestyle appears well-balanced, supporting both your physical and mental health. This balance is crucial for sustainable weight management and overall well-being.',
+            recommendations:
+              card.status === 'critical' || card.status === 'warning'
+                ? [
+                    'Practice stress management techniques (meditation, deep breathing)',
+                    'Prioritize sleep as a critical health factor',
+                    'Increase physical activity to reduce stress hormones',
+                    'Identify and address sources of chronic stress',
+                    'Consider counseling or therapy if stress is overwhelming',
+                    'Build a strong support network',
+                    'Set realistic, achievable goals to reduce pressure',
+                  ]
+                : [
+                    'Continue your balanced lifestyle approach',
+                    'Maintain stress management practices',
+                    'Stay aware of life changes that might affect balance',
+                    'Continue prioritizing self-care activities',
+                  ],
+          },
+        };
+
+        return (
+          contentMap[card.title] || {
+            description: 'Detailed information about this health aspect.',
+            recommendations: ['Consult with a healthcare professional for personalized advice.'],
+          }
+        );
+      }
+
+      // Add to Cart function for Shopify
+      function addToCart() {
+        // Replace with your actual product variant ID from Shopify
+        const variantId = 'YOUR_PRODUCT_VARIANT_ID'; // You'll need to replace this with actual variant ID
+        const quantity = 1;
+
+        // Shopify AJAX API call
+        fetch('/cart/add.js', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            items: [
+              {
+                id: variantId,
+                quantity: quantity,
+              },
+            ],
+          }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            // Success - you can customize this
+            alert('Product added to cart!');
+            // Optionally redirect to cart
+            // window.location.href = '/cart';
+          })
+          .catch((error) => {
+            console.error('Error:', error);
+            alert('Sorry, there was an error adding the product to cart.');
+          });
+      }
+
+      function restartQuiz() {
+        // Hide results page and show welcome page
+        document.getElementById('resultsPage').classList.remove('active');
+        document.getElementById('welcomePage').classList.remove('hidden');
+
+        // Reset quiz state
+        currentStep = 1;
+        progressBar.style.width = '0%';
+
+        // Reset form
+        document.getElementById('quizForm').reset();
+
+        // Reset BMI display
+        document.getElementById('bmi-display').style.display = 'none';
+
+        // Reset quiz sections
+        document.querySelectorAll('.option-group').forEach((group) => {
+          group.classList.remove('active');
+          group.style.display = 'none';
+        });
+        document.querySelector('.option-group[data-step="1"]').classList.add('active');
+        document.querySelector('.option-group[data-step="1"]').style.display = 'block';
+
+        updateButtonText();
+      }
+
+      // Add bounce animation to labels
+      document
+        .querySelectorAll(".option-group input[type='radio'], .option-group input[type='checkbox']")
+        .forEach((input) => {
+          input.addEventListener('change', (e) => {
+            const label = e.target.nextElementSibling;
+            label.classList.remove('bounce');
+            void label.offsetWidth;
+            label.classList.add('bounce');
+          });
+        });
+
+      // Handle gender selection to show/hide PCOS option
+      document.querySelectorAll('input[name="gender"]').forEach((input) => {
+        input.addEventListener('change', function () {
+          const pcosOption = document.getElementById('pcosOption');
+          const pcosCheckbox = document.getElementById('condition1');
+
+          if (this.value === 'Female') {
+            pcosOption.classList.add('show');
+          } else {
+            pcosOption.classList.remove('show');
+            // Uncheck PCOS if it was selected and user changes gender
+            if (pcosCheckbox.checked) {
+              pcosCheckbox.checked = false;
+            }
+          }
+        });
+      });
+
+      // BMI auto-calculation
+      function calculateBMI() {
+        const heightInput = document.querySelector('input[name="height_cm"]');
+        const weightInput = document.querySelector('input[name="weight"]');
+        const bmiDisplay = document.getElementById('bmi-display');
+        const bmiValue = document.getElementById('bmi-value');
+        const bmiCategory = document.getElementById('bmi-category');
+
+        if (heightInput.value && weightInput.value) {
+          const height = parseFloat(heightInput.value) / 100; // convert to meters
+          const weight = parseFloat(weightInput.value);
+
+          if (height > 0 && weight > 0) {
+            const bmi = (weight / (height * height)).toFixed(1);
+            bmiValue.textContent = bmi;
+
+            // Determine BMI category
+            let category = '';
+            if (bmi < 18.5) {
+              category = 'Underweight';
+            } else if (bmi < 25) {
+              category = 'Normal weight';
+            } else if (bmi < 30) {
+              category = 'Overweight';
+            } else {
+              category = 'Obese';
+            }
+
+            bmiCategory.textContent = `Category: ${category}`;
+            bmiDisplay.style.display = 'block';
+          } else {
+            bmiDisplay.style.display = 'none';
+          }
+        } else {
+          bmiDisplay.style.display = 'none';
+        }
+      }
+
+      // Add event listeners for BMI calculation
+      document.querySelector('input[name="height_cm"]').addEventListener('input', calculateBMI);
+      document.querySelector('input[name="weight"]').addEventListener('input', calculateBMI);
+
+      // Modal event listeners
+      document.addEventListener('DOMContentLoaded', function () {
+        const modal = document.getElementById('healthDetailModal');
+
+        // Close modal when clicking outside of it
+        modal.addEventListener('click', function (e) {
+          if (e.target === modal) {
+            closeHealthDetail();
+          }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && modal.classList.contains('active')) {
+            closeHealthDetail();
+          }
+        });
+      });
+
+      // Initialize
+      updateButtonText();
+      progressBar.style.width = '0%';
+    </script>
+  </body>
+</html>
